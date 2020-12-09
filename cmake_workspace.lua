@@ -28,16 +28,36 @@
 		--
 
 		p.w('cmake_minimum_required (VERSION 3.4.1)')
+		p.w([=[
+	# You can tweak some common (for all subprojects) stuff here. For example:
+
+	#set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+	#set(CMAKE_DISABLE_SOURCE_CHANGES  ON)
+
+	if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+	message(SEND_ERROR "In-source builds are not allowed.")
+	endif ()
+
+	#set(CMAKE_VERBOSE_MAKEFILE ON)
+	#set(CMAKE_COLOR_MAKEFILE   ON)
+
+		]=])
 
 		local tagsdb = ""
---		local tagsdb = "./" .. wks.name .. ".tags"
+	--		local tagsdb = "./" .. wks.name .. ".tags"
 		--p.push('<cmake_Workspace Name="%s" Database="%s" SWTLW="No">', wks.name, tagsdb)
 
 		--
 		-- Project list
 		--
 
-		p.w("project ('%s' C CXX)", wks.name)
+		p.w("project ('%s')", wks.name)
+
+		p.w([=[
+	# When done tweaking common stuff, configure the components (subprojects).
+	# NOTE: The order matters! The most independent ones should go first.
+
+		]=])
 
 		local tr = workspace.grouptree(wks)
 		tree.traverse(tr, {
@@ -48,7 +68,8 @@
 				local prjpath = p.filename(prj, ".project")
 				prjpath = path.getrelative(prj.workspace.location, prjpath)
 
-				p.w("include(%s.cmake)",prj.name)
+				-- p.w("include(%s.cmake)",prj.name)
+				p.w("add_subdirectory( \"%s\" )", path.getrelative( path.getabsolute(wks.location), prj.location))
 				-- if (prj.name == wks.startproject) then
 				-- 	p.w('<Project Name="%s" Path="%s" Active="Yes"/>', prj.name, prjpath)
 				-- else

@@ -81,25 +81,22 @@
 		return result
 	end
 
-	function cmake.wksdir(wks)
-		return wks.location .. "/" .. wks.name .. "/"
-	end
-
 	function cmake.generateWorkspace(wks)
 		p.eol("\r\n")
 		p.indent("  ")
 		p.escaper(cmake.esc)
-		os.mkdir(wks.location .. "/" .. wks.name)
-		p.generate(wks, cmake.wksdir(wks) .. "/CMakeLists.txt", cmake.workspace.generate)
+		os.mkdir(wks.location)
+		p.generate(wks, wks.location .. "/CMakeLists.txt", cmake.workspace.generate)
 	end
 
 	function cmake.generateProject(prj)
 		p.eol("\r\n")
 		p.indent("  ")
 		p.escaper(cmake.esc) 
+		os.mkdir(prj.location)
 		if project.isc(prj) or project.iscpp(prj) then
 			for cfgname in project.eachconfig(prj) do
-				p.generate(prj, cmake.wksdir(prj.workspace) .. prj.name ..  ".cmake", cmake.project.generate)
+				p.generate(prj, prj.location .. "/CMakeLists.txt", cmake.project.generate)
 			end
 		end
 	end
@@ -109,11 +106,34 @@
 	end
 
 	function cmake.cleanProject(prj)
-		p.clean.file(prj, prj.name .. ".cmake")
+		p.clean.file(prj, prj.location .. "/CMakeLists.txt")
 	end
 
 	function cmake.cleanTarget(prj)
 		-- TODO..
+	end
+
+	function cmake.getCmakeIncludeStr(vcExecPath, libName)
+		local platformInfo = ""
+		if cmake.getOsInfo() == "win" then
+			platformInfo = ":x64-windows"
+		end
+		local f = assert(io.popen(vcExecPath.." install "..libName..platformInfo, "r"))
+		local s = assert(f:read('*a'))
+		f:close()
+		s = string.gsub( s,".*To use in your CMakeLists.txt:[\n\r]+", "" )
+		s = string.gsub( s,".*provides CMake targets:[\n\r]+", "" )
+		s = string.gsub( s,"[\n\r]+For more .*","" )
+		return s
+	end
+
+	function cmake.getOsInfo()
+		local value = os.getenv("OS")
+		if string.match( value,"Windows" ) then
+			return "win"
+		else
+			return "unix"
+		end
 	end
 
 	include("cmake_workspace.lua")

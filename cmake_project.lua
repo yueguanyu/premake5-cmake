@@ -97,14 +97,44 @@
 		--_p('<?xml version="1.0" encoding="UTF-8"?>')
 		--local type = m.internalTypeMap[prj.kind] or ""
 		--_x('<cmake_Project Name="%s" InternalType="%s">', prj.name, type)
-		--p.w("project ('%s_%s' C CXX)", prj.workspace.name, prj.name)
+		p.w("project ('%s_%s' C CXX)", prj.workspace.name, prj.name)
+	end
+
+	function m.dependsonPre(prj)
+		for _,v in ipairs(prj.dependson) do
+			print("dependson before:",v)
+			local vcExecPath = os.getenv("VCPKG_EXEC_PATH")
+			local str = cmake.getCmakeIncludeStr(vcExecPath,v)
+			local pre = "find_package("..v.." CONFIG REQUIRED)"
+			if str ~= nil then
+				pre = string.gsub( str, "target_link_libraries.*", "" )
+				pre = string.gsub( pre,"[\n\r]+","" )
+			end
+			p.w(pre)
+		end
+	end
+
+	function m.dependsonAfter(prj)
+		for _,v in ipairs(prj.dependson) do
+			print("dependson after:",v)
+			local vcExecPath = os.getenv("VCPKG_EXEC_PATH")
+			local str = cmake.getCmakeIncludeStr(vcExecPath,v)
+			local after = "target_link_libraries("..prj.name.." PRIVATE "..string.upper(v).."::lib"..v..")"
+			if str ~= nil then
+				after = string.match( str, "target_link_libraries.*" )
+				after = string.gsub( after,"[\n\r]+","" )
+				after = string.gsub( after, "main", prj.name )
+			end
+			-- print(after)
+			p.w(after)
+		end
 	end
 
 	function m.plugins(prj)
---		_p(1, '<Plugins>')
+	--		_p(1, '<Plugins>')
 			-- <Plugin Name="CMakePlugin">
 			-- <Plugin Name="qmake">
---		_p(1, '</Plugins>')
+	--		_p(1, '</Plugins>')
 
 		--_p(1, '<Plugins/>')
 	end
@@ -152,7 +182,7 @@
 		p.pop(")")
 
 		local function ends_with(str, ending)
-		   return ending == "" or str:sub(-#ending) == ending
+		return ending == "" or str:sub(-#ending) == ending
 		end
 		tree.traverse(tr, {
 			onbranchenter = function(node, depth)
@@ -173,16 +203,16 @@
 
 		p.push("set_target_properties (%s PROPERTIES",prj.name)
 		p.w('OUTPUT_NAME "%s"',prj.name)
-	    --p.w('CXX_STANDARD 17')
-	    --p.w('CXX_EXTENSIONS OFF')
-	    p.pop(')')
+		--p.w('CXX_STANDARD 17')
+		--p.w('CXX_EXTENSIONS OFF')
+		p.pop(')')
 	end
 
 	function m.dependencies(prj)
 
 		-- TODO: dependencies don't emit a line for each config if there aren't any...
 
---		_p(1, '<Dependencies/>')
+	--		_p(1, '<Dependencies/>')
 
 		-- local dependencies = project.getdependencies(prj)
 		-- for cfg in project.eachconfig(prj) do
@@ -278,8 +308,8 @@
 		for _,x in ipairs(cxxflagstbl) do
 			local y = os.outputof (string.format('echo "%s "', x))
 			for str in string.gmatch(y, "-I([^ ]+)") do
-                p.w('"%s"',str)
-        	end
+				p.w('"%s"',str)
+			end
 		end
 		p.pop(')')
 		p.push('target_compile_definitions (%s PUBLIC ',prj.name)
@@ -360,7 +390,7 @@
 		-- else
 		-- 	ldPath = string.sub(ldPath, 2)
 		-- 	_x(3, '<General OutputFile="%s" IntermediateDirectory="%s" Command="LD_LIBRARY_PATH=%s %s" CommandArguments="%s" UseSeparateDebugArgs="%s" DebugArguments="%s" WorkingDirectory="%s" PauseExecWhenProcTerminates="%s" IsGUIProgram="%s" IsEnabled="%s"/>',
- 	-- 			targetname, objdir, ldPath, command, cmdargs, useseparatedebugargs, debugargs, workingdir, pauseexec, isguiprogram, isenabled)
+	-- 			targetname, objdir, ldPath, command, cmdargs, useseparatedebugargs, debugargs, workingdir, pauseexec, isguiprogram, isenabled)
 		-- end
 	end
 
@@ -549,9 +579,11 @@
 	m.elements.project = function(prj)
 		return {
 			m.header,
+			m.dependsonPre,
 			m.plugins,
 			m.description,
 			m.files,
+			m.dependsonAfter,
 			m.dependencies,
 			m.settings,
 		}
