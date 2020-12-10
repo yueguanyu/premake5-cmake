@@ -119,7 +119,7 @@
 			print("dependson after:",v)
 			local vcExecPath = os.getenv("VCPKG_EXEC_PATH")
 			local str = cmake.getCmakeIncludeStr(vcExecPath,v)
-			local after = "target_link_libraries("..prj.name.." PRIVATE "..string.upper(v).."::lib"..v..")"
+			local after = "target_link_libraries("..prj.name.." PRIVATE "..string.upper(v).."::"..v..")"
 			if str ~= nil then
 				after = string.match( str, "target_link_libraries.*" )
 				after = string.gsub( after,"[\n\r]+","" )
